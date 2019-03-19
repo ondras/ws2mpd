@@ -6,12 +6,18 @@ function log(...args) {
 	console.log(Date.now(), ...args);
 }
 
-function initConnection(ws, server, port) {
-	log(`ws connection accepted, connecting to ${server}:${port}`);
+function initConnection(request) {
+	let ws = request.accept();
+	log("ws connection accepted from origin", request.origin);
+
+	let parts = (request.resourceURL.query.server || "").split(":");
+	let host = parts[0] || "0";
+	let port = Number(parts[1]) || 6600;
+	log(`connecting to mpd at ${host}:${port}`);
 
 	let mpd = new (require("net").Socket)();
 	mpd.setTimeout(0);
-	mpd.connect(port, server);
+	mpd.connect(port, host);
 
 	let commandQueue = [];
 	let command = null;
@@ -51,16 +57,7 @@ function initConnection(ws, server, port) {
 	waitForCommand(commands.welcome(mpd));
 }
 
-function onRequest(request) {
-	let s = request.resourceURL.query.server || "";
-	let r = s.match(/^([^:]+)(:([0-9]+))?$/);
-	if (!r) { return request.reject(); }
-	let connection = request.accept(null, request.origin);
-
-	initConnection(connection, r[1], r[3] || 6600);
-}
-
-exports.ws2mpd = function(httpServer) {
+exports.ws2mpd = function(httpServer, originRegExp) {
 	function ready() { log("ws2mpd attached to a http server", httpServer.address()); }
 	(httpServer.listening ? ready() : httpServer.on("listening", ready));
 
@@ -68,5 +65,12 @@ exports.ws2mpd = function(httpServer) {
 		httpServer,
 		autoAcceptConnections: false
 	});
-	wsServer.on("request", onRequest);
+
+	wsServer.on("request", request => {
+		if (originRegExp && !request.origin.match(originRegExp)) { 
+			log("rejecting connection from origin", request.origin);
+			return request.reject();
+		}
+		initConnection(request);
+	});
 }
