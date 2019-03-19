@@ -16,10 +16,11 @@ function initConnection(ws, server, port) {
 	let commandQueue = [];
 	let command = null;
 
-	function waitForCommand(command) {
-		command.on("done", data => {
+	function waitForCommand(cmd) {
+		command = cmd;
+		cmd.on("done", data => {
 			log("ws <--", data);
-			ws.send(data);
+			ws.send(JSON.stringify(data));
 			command = null;
 			processQueue();
 		});
@@ -27,8 +28,8 @@ function initConnection(ws, server, port) {
 
 	function processQueue() {
 		if (command || !commandQueue.length) { return; }
-		command = commands.create(mpd, commandQueue.shift());
-		waitForCommand(command);
+		let cmd = commands.create(mpd, commandQueue.shift());
+		waitForCommand(cmd);
 	}
 
 	ws.on("message", message => {
