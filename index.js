@@ -54,6 +54,11 @@ function initConnection(request) {
 		ws.close();
 	});
 
+	mpd.on("error", () => {
+		log("mpd connection error");
+		ws.close();
+	});
+
 	waitForCommand(commands.welcome(mpd));
 }
 

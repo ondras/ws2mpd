@@ -23,6 +23,7 @@ class Command extends EventEmitter {
 
 	_done(data) {
 		this._mpd.off("data", this._dataListener);
+		this._buffer = null;
 		this.emit("done", data);
 	}
 
@@ -60,7 +61,59 @@ class Welcome extends Command {
 	}
 }
 
+class AlbumArt extends Command {
+	constructor(mpd, command) {
+		super(mpd);
+		this._size = 0;
+		this._binary = 0;
+		this._data = null;
+		this._lines = [];
+
+		log("--> mpd", command);
+		mpd.write(command + "\n");
+	}
+
+	_processBuffer() {
+		if (!this._size) {
+			let line = this._getLine();
+			if (!line) { return; }
+			this._lines.push(line);
+			this._size = Number(line.split(": ").pop());
+			log("size", this._size);
+		}
+
+		if (!this._binary) {
+			let line = this._getLine();
+			if (!line) { return; }
+			this._lines.push(line);
+			this._binary = Number(line.split(": ").pop());
+			log("binary", this._binary);
+		}
+
+		if (!this._data) {
+			// binary data has this._binary bytes + 1 newline
+			if (this._buffer.length >= this._binary+1) {
+				this._data = this._buffer.slice(0, this._binary);
+				this._buffer = this._buffer.slice(this._binary+1);
+				this._lines.push([...this._data]);
+				log("data", this._data.length);
+			} else { return; }
+		} 
+
+		let line = this._getLine();
+		if (!line) { return; }
+		this._lines.push(line);
+		this._done(this._lines);
+	}
+
+}
+
 exports.create = function(mpd, command) {
+	if (command.startsWith("albumart")) {
+		return new AlbumArt(mpd, command);
+	} else {
+		return new Normal(mpd, command);
+	}
 	return new Normal(mpd, command);
 }
 
