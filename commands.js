@@ -57,7 +57,7 @@ class Normal extends Command {
 class Welcome extends Command {
 	_processBuffer() {
 		let line = this._getLine();
-		if (line) { this._done(line); }
+		if (line) { this._done([line]); }
 	}
 }
 
@@ -78,6 +78,12 @@ class AlbumArt extends Command {
 			let line = this._getLine();
 			if (!line) { return; }
 			this._lines.push(line);
+
+			if (line.startsWith("ACK")) { // no art!
+				this._done(this._lines);
+				return;
+			}
+
 			this._size = Number(line.split(": ").pop());
 			log("size", this._size);
 		}
