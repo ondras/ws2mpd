@@ -1,6 +1,6 @@
 {
   "name": "ws2mpd",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -12,9 +12,11 @@
   "dependencies": {
     "websocket": "^1.0.28"
   },
-  "engines" : { "node" : ">=10.0.0" },
-	"repository": {
-	  "type" : "git",
-	  "url" : "https://github.com/ondras/ws2mpd.git"
-	}
+  "engines": {
+    "node": ">=10.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ondras/ws2mpd.git"
+  }
 }
