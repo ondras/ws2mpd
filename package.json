@@ -12,6 +12,7 @@
   "dependencies": {
     "websocket": "^1.0.28"
   },
+  "engines" : { "node" : ">=10.0.0" },
 	"repository": {
 	  "type" : "git",
 	  "url" : "https://github.com/ondras/ws2mpd.git"
