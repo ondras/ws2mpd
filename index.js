@@ -1,10 +1,7 @@
 #!/usr/bin/env node
 
 const commands = require("./commands");
-
-function log(...args) {
-	console.log(Date.now(), ...args);
-}
+const log = require("./log.js").log;
 
 function initConnection(request) {
 	let ws = request.accept();
@@ -60,6 +57,10 @@ function initConnection(request) {
 	});
 
 	waitForCommand(commands.welcome(mpd));
+}
+
+exports.logging = function(enabled) {
+	log.enabled = enabled;
 }
 
 exports.ws2mpd = function(httpServer, originRegExp) {

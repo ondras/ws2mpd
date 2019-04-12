@@ -1,8 +1,5 @@
 const EventEmitter = require("events");
-
-function log(...args) {
-	console.log(Date.now(), ...args);
-}
+const log = require("./log.js").log;
 
 class Command extends EventEmitter {
 	constructor(mpd) {
