@@ -63,7 +63,7 @@ exports.logging = function(enabled) {
 	log.enabled = enabled;
 }
 
-exports.ws2mpd = function(httpServer, originRegExp) {
+exports.ws2mpd = function(httpServer, requestValidator) {
 	function ready() { log("ws2mpd attached to a http server", httpServer.address()); }
 	(httpServer.listening ? ready() : httpServer.on("listening", ready));
 
@@ -73,7 +73,7 @@ exports.ws2mpd = function(httpServer, originRegExp) {
 	});
 
 	wsServer.on("request", request => {
-		if (originRegExp && !request.origin.match(originRegExp)) { 
+		if (requestValidator && !requestValidator(request)) {
 			log("rejecting connection from origin", request.origin);
 			return request.reject();
 		}
