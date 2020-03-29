@@ -8,7 +8,7 @@ function initConnection(request) {
 	log("ws connection accepted from origin", request.origin);
 
 	let parts = (request.resourceURL.query.server || "").split(":");
-	let host = parts[0] || "0";
+	let host = parts[0] || "localhost";
 	let port = Number(parts[1]) || 6600;
 	log(`connecting to mpd at ${host}:${port}`);
 
