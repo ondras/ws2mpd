@@ -1,7 +1,7 @@
 const EventEmitter = require("events");
 const log = require("./log.js").log;
 
-class Command extends EventEmitter {
+class Response extends EventEmitter {
 	constructor(mpd) {
 		super();
 		this._mpd = mpd;
@@ -33,12 +33,10 @@ class Command extends EventEmitter {
 	}
 }
 
-class Normal extends Command {
-	constructor(mpd, command) {
+class Normal extends Response {
+	constructor(mpd) {
 		super(mpd);
 		this._lines = [];
-		log("--> mpd", command);
-		mpd.write(command + "\n");
 	}
 
 	_processBuffer() {
@@ -51,23 +49,22 @@ class Normal extends Command {
 	}
 }
 
-class Welcome extends Command {
+class Idle extends Normal {}
+
+class Welcome extends Response {
 	_processBuffer() {
 		let line = this._getLine();
 		if (line) { this._done([line]); }
 	}
 }
 
-class AlbumArt extends Command {
-	constructor(mpd, command) {
+class Binary extends Response {
+	constructor(mpd) {
 		super(mpd);
 		this._size = 0;
 		this._binary = 0;
 		this._data = null;
 		this._lines = [];
-
-		log("--> mpd", command);
-		mpd.write(command + "\n");
 	}
 
 	_processBuffer() {
@@ -101,25 +98,59 @@ class AlbumArt extends Command {
 				this._lines.push([...this._data]);
 				log("data", this._data.length);
 			} else { return; }
-		} 
+		}
 
 		let line = this._getLine();
 		if (!line) { return; }
 		this._lines.push(line);
 		this._done(this._lines);
 	}
-
 }
 
-exports.create = function(mpd, command) {
-	if (command.startsWith("albumart")) {
-		return new AlbumArt(mpd, command);
-	} else {
-		return new Normal(mpd, command);
+
+exports.Queue = class extends EventEmitter {
+	constructor(mpd) {
+		super();
+		this._mpd = mpd;
+		this._waiting = [];
+		this._current = null;
+
+		this._create(Welcome);
 	}
-	return new Normal(mpd, command);
+
+	add(str) {
+		if (str == "noidle" && this._current instanceof Idle) {
+			this._mpd.write(str + "\n");
+			return;
+		}
+		this._waiting.push(str);
+		this._process();
+	}
+
+	_process() {
+		if (this._current || !this._waiting.length) { return; }
+		let str = this._waiting.shift();
+		this._create(getCtor(str));
+		log("--> mpd", str);
+		this._mpd.write(str + "\n");
+	}
+
+	_create(ctor) {
+		let cmd = new ctor(this._mpd);
+		this._current = cmd;
+
+		cmd.on("done", data => {
+			this.emit("response", data);
+			this._current = null;
+			this._process();
+		});
+	}
 }
 
-exports.welcome = function(mpd) {
-	return new Welcome(mpd);
+function getCtor(command) {
+	switch (true) {
+		case command.startsWith("idle"): return Idle;
+		case command.startsWith("albumart") || command.startsWith("readpicture"): return Binary;
+		default: return Normal;
+	}
 }

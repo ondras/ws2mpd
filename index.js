@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
-const commands = require("./commands");
 const log = require("./log.js").log;
+const Queue = require("./queue").Queue;
 
 function initConnection(request) {
 	let ws = request.accept();
@@ -16,47 +16,36 @@ function initConnection(request) {
 	mpd.setTimeout(0);
 	mpd.connect(port, host);
 
-	let commandQueue = [];
-	let command = null;
-
-	function waitForCommand(cmd) {
-		command = cmd;
-		cmd.on("done", data => {
-			log("ws <--", data);
-			ws.send(JSON.stringify(data));
-			command = null;
-			processQueue();
-		});
-	}
-
-	function processQueue() {
-		if (command || !commandQueue.length) { return; }
-		let cmd = commands.create(mpd, commandQueue.shift());
-		waitForCommand(cmd);
-	}
-
-	ws.on("message", message => {
-		log("ws -->", message.utf8Data);
-		commandQueue.push(message.utf8Data);
-		processQueue();
+	// data coming from the response parser
+	let queue = new Queue(mpd);
+	queue.on("response", data => {
+		log("ws <--", data);
+		ws.send(JSON.stringify(data));
 	});
 
+	// data going into the response parser
+	ws.on("message", message => {
+		log("ws -->", message.utf8Data);
+		queue.add(message.utf8Data);
+	});
+
+	// client closes
 	ws.on("close", (reasonCode, description) => {
 		log(`ws ${ws.remoteAddress} disconnected`);
 		mpd.end();
 	});
 
+	// server closes
 	mpd.on("close", () => {
 		log("mpd disconnected");
 		ws.close();
 	});
 
+	// fail to conect
 	mpd.on("error", () => {
 		log("mpd connection error");
 		ws.close();
 	});
-
-	waitForCommand(commands.welcome(mpd));
 }
 
 exports.logging = function(enabled) {
