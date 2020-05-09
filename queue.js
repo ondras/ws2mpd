@@ -119,8 +119,12 @@ exports.Queue = class extends EventEmitter {
 	}
 
 	add(str) {
-		if (str == "noidle" && this._current instanceof Idle) {
-			this._mpd.write(str + "\n");
+		if (str == "noidle") {
+			if (this._current instanceof Idle) {
+				this._mpd.write(str + "\n");
+			} else {
+				log("throwing away rogue noidle");
+			}
 			return;
 		}
 		this._waiting.push(str);
