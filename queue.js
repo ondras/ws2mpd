@@ -49,6 +49,7 @@ class Normal extends Response {
 	}
 }
 
+class Password extends Normal {}
 class Idle extends Normal {}
 
 class Welcome extends Response {
@@ -144,7 +145,7 @@ exports.Queue = class extends EventEmitter {
 		this._current = cmd;
 
 		cmd.on("done", data => {
-			this.emit("response", data);
+			if (ctor != Password) { this.emit("response", data); } // do not pass password check result back
 			this._current = null;
 			this._process();
 		});
@@ -153,6 +154,7 @@ exports.Queue = class extends EventEmitter {
 
 function getCtor(command) {
 	switch (true) {
+		case command.startsWith("password"): return Password;
 		case command.startsWith("idle"): return Idle;
 		case command.startsWith("albumart") || command.startsWith("readpicture"): return Binary;
 		default: return Normal;

@@ -3,7 +3,11 @@
 const log = require("./log.js").log;
 const Queue = require("./queue").Queue;
 
-function initConnection(request) {
+function escape(str) {
+	return str.replace(/(['"\\])/g, "\\$1");
+}
+
+function initConnection(request, passwords = {}) {
 	let ws = request.accept();
 	log("ws connection accepted from origin", request.origin);
 
@@ -22,6 +26,9 @@ function initConnection(request) {
 		log("ws <--", data);
 		ws.send(JSON.stringify(data));
 	});
+
+	let password = passwords[`${host}:${port}`];
+	password && queue.add(`password "${escape(password)}"`);
 
 	// data going into the response parser
 	ws.on("message", message => {
@@ -52,7 +59,7 @@ exports.logging = function(enabled) {
 	log.enabled = enabled;
 }
 
-exports.ws2mpd = function(httpServer, requestValidator) {
+exports.ws2mpd = function(httpServer, requestValidator, passwords) {
 	function ready() { log("ws2mpd attached to a http server", httpServer.address()); }
 	(httpServer.listening ? ready() : httpServer.on("listening", ready));
 
@@ -66,6 +73,6 @@ exports.ws2mpd = function(httpServer, requestValidator) {
 			log("rejecting connection from origin", request.origin);
 			return request.reject();
 		}
-		initConnection(request);
+		initConnection(request, passwords);
 	});
 }
